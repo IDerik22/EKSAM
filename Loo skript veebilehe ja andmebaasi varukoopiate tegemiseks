@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# Define variables
+WEB_DIR="/var/www/html"  # Web directory
+DB_NAME="your_database_name"  # Database name
+DB_USER="your_db_user"  # Database user
+DB_PASS="your_db_password"  # Database password
+BACKUP_DIR="/var/backups"  # Directory where backups will be stored
+BACKUP_INTERVAL=7200  # 2 hours in seconds
+RETENTION_PERIOD=7  # 7 days retention period for backups
+
+# Function to create a backup
+create_backup() {
+    TIMESTAMP=$(date +'%Y%m%d_%H%M%S')  # Current timestamp for backup file name
+    BACKUP_FILE="${BACKUP_DIR}/backup_${TIMESTAMP}.tar.gz"  # Backup file name with timestamp
+    SQL_DUMP="/tmp/db_backup_${TIMESTAMP}.sql"  # Temporary SQL dump file
+
+    # Dump the database to a SQL file
+    mysqldump -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$SQL_DUMP"
+    
+    # Create a tarball of the web directory and the SQL dump file
+    tar -czf "$BACKUP_FILE" -C "$WEB_DIR" . -C /tmp "$(basename "$SQL_DUMP")"
+    
+    # Remove the temporary SQL dump file
+    rm "$SQL_DUMP"
+    
+    echo "Backup created at $BACKUP_FILE"
+}
+
+# Function to clean up old backups
+cleanup_old_backups() {
+    # Find and remove backup files older than the retention period
+    find "$BACKUP_DIR" -type f -name "backup_*.tar.gz" -mtime +$RETENTION_PERIOD -exec rm -f {} \;
+    echo "Old backups cleaned up"
+}
+
+# Infinite loop to create backups every 2 hours
+while true; do
+    create_backup  # Call the backup creation function
+    cleanup_old_backups  # Call the cleanup function
+    sleep $BACKUP_INTERVAL  # Wait for the specified interval before next backup
+done
+
+
+chmod +x backup_website_and_db.sh
+
+nohup ./backup_website_and_db.sh &
