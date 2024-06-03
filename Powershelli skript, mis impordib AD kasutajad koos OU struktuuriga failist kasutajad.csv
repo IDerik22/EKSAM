@@ -1,0 +1,52 @@
+# Impordi Active Directory moodul
+Import-Module ActiveDirectory
+
+# Määrake CSV-faili asukoht
+$csvFile = "C:\path\to\kasutajad.csv"
+
+# Loetakse CSV fail
+$users = Import-Csv -Path $csvFile
+
+foreach ($user in $users) {
+    # Eraldage kasutaja andmed CSV failist
+    $userName = $user.UserName
+    $firstName = $user.FirstName
+    $lastName = $user.LastName
+    $ou = $user.OU
+    $password = $user.Password
+
+    # Määrake kasutaja UPN (User Principal Name)
+    $userPrincipalName = "$userName@example.com"  # Kohandage domeeni nimi vastavalt
+
+    # Kontrollige, kas OU eksisteerib ja looge vajadusel
+    if (-not (Get-ADOrganizationalUnit -Filter {DistinguishedName -eq $ou})) {
+        # Eraldage OU osad
+        $ouParts = $ou -split ","
+        $ouPath = ""
+        
+        foreach ($part in $ouParts) {
+            if ($part -like "OU=*") {
+                $ouPath = if ($ouPath) { "$part,$ouPath" } else { $part }
+
+                if (-not (Get-ADOrganizationalUnit -Filter {DistinguishedName -eq $ouPath})) {
+                    New-ADOrganizationalUnit -Name ($part -replace "OU=", "") -Path $ouPath
+                }
+            }
+        }
+    }
+
+    # Loo AD kasutaja
+    New-ADUser `
+        -Name "$firstName $lastName" `
+        -GivenName $firstName `
+        -Surname $lastName `
+        -SamAccountName $userName `
+        -UserPrincipalName $userPrincipalName `
+        -Path $ou `
+        -AccountPassword (ConvertTo-SecureString $password -AsPlainText -Force) `
+        -Enabled $true
+
+    Write-Host "Kasutaja $userName loodud asukohas $ou"
+}
+
+.\Import-ADUsers.ps1
