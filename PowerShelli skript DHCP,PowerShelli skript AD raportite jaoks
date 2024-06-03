@@ -1,0 +1,56 @@
+# Import the Active Directory module
+Import-Module ActiveDirectory
+
+# Define the output CSV file paths
+$neverLoggedInCsv = "C:\path\to\never_logged_in_accounts.csv"
+$lockedAccountsCsv = "C:\path\to\locked_accounts.csv"
+
+# Get all AD user accounts
+$allUsers = Get-ADUser -Filter * -Property LastLogonDate, LockedOut
+
+# Filter users who have never logged in
+$neverLoggedIn = $allUsers | Where-Object { -not $_.LastLogonDate }
+
+# Export never logged in accounts to CSV
+$neverLoggedIn | Select-Object Name, SamAccountName, UserPrincipalName, LastLogonDate | Export-Csv -Path $neverLoggedInCsv -NoTypeInformation
+
+Write-Host "Raport kontode kohta, mis pole kunagi domeeni loginud, on salvestatud asukohta $neverLoggedInCsv"
+
+# Filter users who are locked out
+$lockedAccounts = $allUsers | Where-Object { $_.LockedOut -eq $true }
+
+# Export locked accounts to CSV
+$lockedAccounts | Select-Object Name, SamAccountName, UserPrincipalName, LockedOut | Export-Csv -Path $lockedAccountsCsv -NoTypeInformation
+
+Write-Host "Raport lukustatud kontode kohta on salvestatud asukohta $lockedAccountsCsv"
+
+
+----------------------------------------------------------------------------------------------------------------
+
+# Import the DHCP Server module
+Import-Module DhcpServer
+
+# Define the DHCP server
+$dhcpServer = "your_dhcp_server_name"
+
+# Define the output CSV file path
+$dhcpLeasesCsv = "C:\path\to\dhcp_active_leases.csv"
+
+# Get active DHCP leases
+$activeLeases = Get-DhcpServerv4Lease -ComputerName $dhcpServer
+
+# Select MAC address and IP address
+$leaseReport = $activeLeases | Select-Object ClientId, IPAddress
+
+# Export the lease report to CSV
+$leaseReport | Export-Csv -Path $dhcpLeasesCsv -NoTypeInformation
+
+Write-Host "Raport DHCP aktiivsete rentide kohta on salvestatud asukohta $dhcpLeasesCsv"
+
+-------------------------------------------------------------------------------------------------------------
+# AD raporti skripti käivitamine
+.\Import-ADReports.ps1
+
+# DHCP raporti skripti käivitamine
+.\Import-DHCPReports.ps1
+
