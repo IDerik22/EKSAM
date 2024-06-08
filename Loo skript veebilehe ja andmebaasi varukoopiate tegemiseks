@@ -41,7 +41,3 @@ while true; do
     sleep $BACKUP_INTERVAL  # Wait for the specified interval before next backup
 done
 
-
-chmod +x backup_website_and_db.sh
-
-nohup ./backup_website_and_db.sh &
